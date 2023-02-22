@@ -48,11 +48,11 @@ class Connection(object):
         except:  # TODO: bare except; but what's an ArgumentError?
             print(self.tell_format())
             raise
+        self.url = engine.url
         self.dialect = engine.url.get_dialect()
-        self.metadata = sqlalchemy.MetaData(bind=engine)
         self.name = self.assign_name(engine)
         self.session = engine.connect()
-        self.connections[repr(self.metadata.bind.url)] = self
+        self.connections[repr(self.url)] = self
         self.connect_args = connect_args
         Connection.current = self
 
@@ -61,6 +61,7 @@ class Connection(object):
         "Sets the current database connection"
 
         if descriptor:
+            existing = None
             if isinstance(descriptor, Connection):
                 cls.current = descriptor
             else:
@@ -94,7 +95,7 @@ class Connection(object):
         for key in sorted(cls.connections):
             engine_url = cls.connections[
                 key
-            ].metadata.bind.url  # type: sqlalchemy.engine.url.URL
+            ].url  # type: sqlalchemy.engine.url.URL
             if cls.connections[key] == cls.current:
                 template = " * {}"
             else:
@@ -115,7 +116,7 @@ class Connection(object):
                 "Could not close connection because it was not found amongst these: %s"
                 % str(cls.connections.keys())
             )
-        cls.connections.pop(str(conn.metadata.bind.url))
+        cls.connections.pop(str(conn.url))
         conn.session.close()
 
     def close(self):

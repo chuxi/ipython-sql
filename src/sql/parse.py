@@ -1,11 +1,8 @@
 import itertools
-import json
-import re
 import shlex
 from os.path import expandvars
 
-import six
-from six.moves import configparser as CP
+import configparser as CP
 from sqlalchemy.engine.url import URL
 
 

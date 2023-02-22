@@ -13,9 +13,9 @@ from IPython.core.magic_arguments import argument, magic_arguments, parse_argstr
 from IPython.display import display_javascript
 from sqlalchemy.exc import OperationalError, ProgrammingError, DatabaseError
 
-import sql.connection
-import sql.parse
-import sql.run
+from . import connection
+from . import parse
+from . import run
 
 try:
     from traitlets.config.configurable import Configurable
@@ -148,12 +148,12 @@ class SqlMagic(Magics, Configurable):
         """
         # Parse variables (words wrapped in {}) for %%sql magic (for %sql this is done automatically)
         cell = self.shell.var_expand(cell)
-        line = sql.parse.without_sql_comment(parser=self.execute.parser, line=line)
+        line = parse.without_sql_comment(parser=self.execute.parser, line=line)
         args = parse_argstring(self.execute, line)
         if args.connections:
-            return sql.connection.Connection.connections
+            return connection.Connection.connections
         elif args.close:
-            return sql.connection.Connection._close(args.close)
+            return connection.Connection.close(args.close)
 
         # save globals and locals so they can be referenced in bind vars
         user_ns = self.shell.user_ns.copy()
@@ -165,11 +165,11 @@ class SqlMagic(Magics, Configurable):
             with open(args.file, "r") as infile:
                 command_text = infile.read() + "\n" + command_text
 
-        parsed = sql.parse.parse(command_text, self)
+        parsed = parse.parse(command_text, self)
 
         connect_str = parsed["connection"]
         if args.section:
-            connect_str = sql.parse.connection_from_dsn_section(args.section, self)
+            connect_str = parse.connection_from_dsn_section(args.section, self)
 
         if args.connection_arguments:
             try:
@@ -191,7 +191,7 @@ class SqlMagic(Magics, Configurable):
             args.creator = user_ns[args.creator]
 
         try:
-            conn = sql.connection.Connection.set(
+            conn = connection.Connection.set(
                 connect_str,
                 displaycon=self.displaycon,
                 connect_args=args.connection_arguments,
@@ -199,7 +199,7 @@ class SqlMagic(Magics, Configurable):
             )
         except Exception as e:
             print(e)
-            print(sql.connection.Connection.tell_format())
+            print(connection.Connection.tell_format())
             return None
 
         if args.persist:
@@ -212,7 +212,7 @@ class SqlMagic(Magics, Configurable):
             return
 
         try:
-            result = sql.run.run(conn, parsed["sql"], self, user_ns)
+            result = run.run(conn, parsed["sql"], self, user_ns)
 
             if (
                 result is not None
@@ -279,7 +279,7 @@ class SqlMagic(Magics, Configurable):
         table_name = self.legal_sql_identifier.search(table_name).group(0)
 
         if_exists = "append" if append else "fail"
-        frame.to_sql(table_name, conn.session.engine, if_exists=if_exists)
+        frame.to_sql(table_name, conn.session.engine, if_exists=if_exists, index=False)
         return "Persisted %s" % table_name
 
 
